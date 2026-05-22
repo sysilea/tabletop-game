@@ -1,13 +1,108 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
+import { useState } from 'react';
+/*import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
-import './App.css'
+import './App.css'*/
+import { createHostPeer, joinHost, broadcastToPlayers} from './networking/peer';
+import Board from "./components/Board";
+import { initialPieces} from "./game/board";
+import PieceInfoPanel from "./components/PieceInfoPanel";
 
 function App() {
-  const [count, setCount] = useState(0)
+  //xconst [count, setCount] = useState(0);
+  const [roomId, setRoomId] = useState("");
+  const [pieces, setPieces] = useState(initialPieces);
+  const [selectedPiece, setSelectedPiece] = useState(null) ;
+  const selectedPieceObject = 
+    pieces.find(
+      p => p.id === selectedPiece
+    );
+
+  function hostGame() {
+    createHostPeer(roomId, (data) => {
+    console.log("Recieved:", data);
+    });
+  }
+
+  function joinGame() {
+    joinHost(roomId, (data) => {
+      console.log("Received:", data);
+    });
+  }
+
+  function sendTestMove() {
+    const move  = {
+      type: "MOVE_PIECE",
+      pieceId: "piece1",
+      x: 3,
+      y: 4
+    };
+    
+    if (window.gameConnection) {
+      window.gameConnection?.send(move)
+    }
+    broadcastToPlayers(move);
+  }
+  
+  function onTileClick(x, y) {
+    const clickedPiece = pieces.find(
+      p => p.x === x && p.y === y
+    );
+  
+    if(clickedPiece) {
+      setSelectedPiece(clickedPiece.id);
+        return;
+      }
+
+    if(selectedPiece) {
+      setPieces(prev =>
+        prev.map(piece =>
+          piece.id === selectedPiece
+            ? {...piece, x, y }
+            : piece
+        )
+      );
+    }
+  }
 
   return (
+    <div style = {{padding: 20 }}>
+      <h1>Tabletop Multiplayer</h1>
+      <input
+      value={roomId}
+      onChange={(e) => setRoomId(e.target.value)}
+      placeholder="Room ID"
+      />
+      
+      <button onClick={hostGame}>Host</button>
+      <button onClick={joinGame}>Join</button>
+
+      <hr />
+
+      <button onClick={sendTestMove}>Send Test Move</button>
+      <div
+      style={{
+        display: "flex",
+        gap: 20,
+        padding: 20
+      }}
+    > 
+
+    <Board
+      pieces = {pieces}
+      selectedPiece = {selectedPiece}
+      onTileClick = {onTileClick}
+    />
+
+    <PieceInfoPanel
+      piece={selectedPieceObject}
+    />
+    </div>
+    </div>
+
+  );
+}
+/*  return (
     <>
       <section id="center">
         <div className="hero">
@@ -118,5 +213,5 @@ function App() {
     </>
   )
 }
-
-export default App
+*/
+export default App;
